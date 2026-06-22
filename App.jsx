@@ -564,6 +564,65 @@ export default function App() {
       </table>
     </div>
   </Card>
+
+  {/* Sumber Leads per Cabang */}
+  <Card title="Sumber Leads per Cabang" subtitle="Breakdown asal iklan dari setiap cabang — diurutkan sama dengan tabel di atas">
+    {(()=>{
+      // Build source-per-cabang from filtered data
+      const m={};
+      const base2 = gCabang==="Semua Cabang"
+        ? (()=>{const s=new Set();return filtered.filter(r=>{const k=r.p||r.n;if(s.has(k))return false;s.add(k);return true;})})()
+        : uniq;
+      base2.forEach(r=>r.c.forEach(c=>{
+        if(!m[c]) m[c]={"Google Ads":0,"Iklan Cabang":0,"Iklan Meta Pusat":0,"Instagram Organik":0,"Website":0,"Lainnya":0};
+        m[c][r.s]=(m[c][r.s]||0)+1;
+      }));
+      // Sort same as cabangSorted
+      let rows2=Object.entries(m).map(([cab,v])=>({cab,...v,total:Object.values(v).reduce((a,b)=>a+b,0)}));
+      if(cabSrch) rows2=rows2.filter(x=>x.cab.toLowerCase().includes(cabSrch.toLowerCase()));
+      if(cabSort==="rate"){
+        // match order of cabangSorted
+        const order=cabangSorted.map(r=>r.cabang);
+        rows2.sort((a,b)=>order.indexOf(a.cab)-order.indexOf(b.cab));
+      } else if(cabSort==="closing"){
+        const order=cabangSorted.map(r=>r.cabang);
+        rows2.sort((a,b)=>order.indexOf(a.cab)-order.indexOf(b.cab));
+      } else {
+        rows2.sort((a,b)=>b.total-a.total);
+      }
+      const SRCS=["Iklan Cabang","Iklan Meta Pusat","Google Ads","Instagram Organik","Website","Lainnya"];
+      const SRC_COLORS_MAP={"Google Ads":"#4285F4","Iklan Cabang":"#ef9f27","Iklan Meta Pusat":"#7F77DD","Instagram Organik":"#E1306C","Website":"#1D9E75","Lainnya":"#9ca3af"};
+      return (
+        <div style={{overflowX:"auto"}}>
+          <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+            <thead>
+              <tr style={{borderBottom:"1px solid #f3f4f6"}}>
+                <th style={{textAlign:"left",padding:"6px 9px",color:"#9ca3af",fontWeight:700,fontSize:10,textTransform:"uppercase",letterSpacing:".04em",whiteSpace:"nowrap"}}>Cabang</th>
+                <th style={{textAlign:"right",padding:"6px 9px",color:"#9ca3af",fontWeight:700,fontSize:10,textTransform:"uppercase",letterSpacing:".04em",whiteSpace:"nowrap"}}>Total</th>
+                {SRCS.map(s=>(
+                  <th key={s} style={{textAlign:"right",padding:"6px 9px",fontWeight:700,fontSize:10,textTransform:"uppercase",letterSpacing:".04em",whiteSpace:"nowrap",color:SRC_COLORS_MAP[s]||"#9ca3af"}}>{s.replace("Iklan Meta Pusat","Meta Pusat").replace("Instagram Organik","IG Organik")}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows2.map((r,i)=>(
+                <tr key={i} style={{borderBottom:"1px solid #f9fafb"}}>
+                  <td style={{padding:"5px 9px",fontWeight:500,color:"#111827",whiteSpace:"nowrap"}}>{r.cab}</td>
+                  <td style={{padding:"5px 9px",textAlign:"right",fontWeight:600,color:"#374151"}}>{r.total}</td>
+                  {SRCS.map(s=>(
+                    <td key={s} style={{padding:"5px 9px",textAlign:"right",color:r[s]>0?(SRC_COLORS_MAP[s]||"#374151"):"#e5e7eb",fontWeight:r[s]>0?600:400}}>
+                      {r[s]>0?r[s]:"—"}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    })()}
+  </Card>
+
 </div>}
 
 {/* ═══════════════════════════════════════════════════════════
