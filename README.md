@@ -14,4 +14,4 @@ Kemudian replace file `src/App.jsx` dan push ke GitHub — Vercel otomatis rebui
 ## Tech Stack
 - React 18 + Vite
 - Recharts (charts)
-- Deploy: Vercel (free tier)
+- Deploy: Vercel (free tier) 
