@@ -566,51 +566,81 @@ export default function App() {
   </Card>
 
   {/* Sumber Leads per Cabang */}
-  <Card title="Sumber Leads per Cabang" subtitle="Breakdown asal iklan dari setiap cabang — diurutkan sama dengan tabel di atas">
+  <Card title="Sumber Leads per Cabang" subtitle="Breakdown sumber iklan per cabang. Kolom 'Ads Cabang' = leads dengan label Ads [nama cabang tsb]">
     {(()=>{
-      // Build source-per-cabang from filtered data
-      const m={};
+      const CABANG_NAMES = [
+        "BALIKPAPAN","BANDUNG","BANJARMASIN","BANYUWANGI","BEKASI","BLITAR","BOGOR",
+        "BOJONEGORO","CIANJUR","CIKARANG","CILEGON","CIMAHI","CIREBON","DEPOK","GARUT",
+        "GRESIK","INDRAMAYU","JEMBER","JEPARA","JOMBANG","KARAWANG","KEDIRI","KENDAL",
+        "KUDUS","LAMONGAN","MADIUN","MAGELANG","MALANG","MOJOKERTO","PASURUAN",
+        "PROBOLINGGO","PULOGADUNG","PURWAKARTA","PURWOKERTO","SALATIGA","SAMARINDA",
+        "SEMARANG","SERANG","SIDOARJO","SOLO","SRAGEN","SUBANG","SUKABUMI","SUMEDANG",
+        "SURABAYA","TANGKOT","TANGSEL","TASIKMALAYA","TUBAN","TULUNGAGUNG","UNGARAN",
+        "YOGYAKARTA","Leads Lainnya"
+      ];
+      const SRCS = ["Ads Cabang","Iklan Meta Pusat","Google Ads","Instagram Organik","Website","Lainnya"];
+      const SRC_CLR = {
+        "Ads Cabang":"#ef9f27","Iklan Meta Pusat":"#7F77DD",
+        "Google Ads":"#4285F4","Instagram Organik":"#E1306C",
+        "Website":"#1D9E75","Lainnya":"#9ca3af"
+      };
+
+      // Build per-cabang breakdown using RAW labels from rows
+      // For "Ads Cabang": count only rows where label contains "Ads [nama cabang itu]"
+      // For others: use normal source categorization
+      const m = {};
+
+      // Use all unique rows (respecting global cabang + period filter)
       const base2 = gCabang==="Semua Cabang"
         ? (()=>{const s=new Set();return filtered.filter(r=>{const k=r.p||r.n;if(s.has(k))return false;s.add(k);return true;})})()
         : uniq;
-      base2.forEach(r=>r.c.forEach(c=>{
-        if(!m[c]) m[c]={"Google Ads":0,"Iklan Cabang":0,"Iklan Meta Pusat":0,"Instagram Organik":0,"Website":0,"Lainnya":0};
-        m[c][r.s]=(m[c][r.s]||0)+1;
-      }));
-      // Sort same as cabangSorted
-      let rows2=Object.entries(m).map(([cab,v])=>({cab,...v,total:Object.values(v).reduce((a,b)=>a+b,0)}));
-      if(cabSrch) rows2=rows2.filter(x=>x.cab.toLowerCase().includes(cabSrch.toLowerCase()));
-      if(cabSort==="rate"){
-        // match order of cabangSorted
-        const order=cabangSorted.map(r=>r.cabang);
-        rows2.sort((a,b)=>order.indexOf(a.cab)-order.indexOf(b.cab));
-      } else if(cabSort==="closing"){
-        const order=cabangSorted.map(r=>r.cabang);
-        rows2.sort((a,b)=>order.indexOf(a.cab)-order.indexOf(b.cab));
-      } else {
-        rows2.sort((a,b)=>b.total-a.total);
-      }
-      const SRCS=["Iklan Cabang","Iklan Meta Pusat","Google Ads","Instagram Organik","Website","Lainnya"];
-      const SRC_COLORS_MAP={"Google Ads":"#4285F4","Iklan Cabang":"#ef9f27","Iklan Meta Pusat":"#7F77DD","Instagram Organik":"#E1306C","Website":"#1D9E75","Lainnya":"#9ca3af"};
+
+      base2.forEach(r => {
+        r.c.forEach(cab => {
+          if(!m[cab]) m[cab] = {"Ads Cabang":0,"Iklan Meta Pusat":0,"Google Ads":0,"Instagram Organik":0,"Website":0,"Lainnya":0};
+          // Check if this row has "Ads [cab]" label specifically
+          const hasAdsCabang = r.ac && r.ac.toUpperCase() === cab.toUpperCase();
+          if(hasAdsCabang) {
+            m[cab]["Ads Cabang"]++;
+          } else if(r.s === "Iklan Cabang") {
+            // Has ads label but for different city — count as Lainnya for this cabang
+            m[cab]["Lainnya"]++;
+          } else {
+            m[cab][r.s] = (m[cab][r.s]||0) + 1;
+          }
+        });
+      });
+
+      // Sort same order as cabangSorted
+      const cabOrder = cabangSorted.map(r=>r.cabang);
+      let rows2 = Object.entries(m)
+        .map(([cab,v])=>({cab,...v,total:Object.values(v).reduce((a,b)=>a+b,0)}))
+        .filter(r => cabSrch==="" || r.cab.toLowerCase().includes(cabSrch.toLowerCase()))
+        .sort((a,b)=>cabOrder.indexOf(a.cab)-cabOrder.indexOf(b.cab));
+
       return (
         <div style={{overflowX:"auto"}}>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
             <thead>
               <tr style={{borderBottom:"1px solid #f3f4f6"}}>
-                <th style={{textAlign:"left",padding:"6px 9px",color:"#9ca3af",fontWeight:700,fontSize:10,textTransform:"uppercase",letterSpacing:".04em",whiteSpace:"nowrap"}}>Cabang</th>
-                <th style={{textAlign:"right",padding:"6px 9px",color:"#9ca3af",fontWeight:700,fontSize:10,textTransform:"uppercase",letterSpacing:".04em",whiteSpace:"nowrap"}}>Total</th>
+                <th style={{textAlign:"left",padding:"6px 9px",color:"#9ca3af",fontWeight:700,fontSize:10,textTransform:"uppercase",letterSpacing:".04em",whiteSpace:"nowrap",position:"sticky",left:0,background:"#fff"}}>Cabang</th>
+                <th style={{textAlign:"right",padding:"6px 9px",color:"#374151",fontWeight:700,fontSize:10,textTransform:"uppercase",letterSpacing:".04em",whiteSpace:"nowrap"}}>Total</th>
                 {SRCS.map(s=>(
-                  <th key={s} style={{textAlign:"right",padding:"6px 9px",fontWeight:700,fontSize:10,textTransform:"uppercase",letterSpacing:".04em",whiteSpace:"nowrap",color:SRC_COLORS_MAP[s]||"#9ca3af"}}>{s.replace("Iklan Meta Pusat","Meta Pusat").replace("Instagram Organik","IG Organik")}</th>
+                  <th key={s} style={{textAlign:"right",padding:"6px 9px",fontWeight:700,fontSize:10,textTransform:"uppercase",letterSpacing:".04em",whiteSpace:"nowrap",color:SRC_CLR[s]}}>
+                    {s==="Iklan Meta Pusat"?"Meta Pusat":s==="Instagram Organik"?"IG Organik":s}
+                  </th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {rows2.map((r,i)=>(
                 <tr key={i} style={{borderBottom:"1px solid #f9fafb"}}>
-                  <td style={{padding:"5px 9px",fontWeight:500,color:"#111827",whiteSpace:"nowrap"}}>{r.cab}</td>
+                  <td style={{padding:"5px 9px",fontWeight:500,color:"#111827",whiteSpace:"nowrap",position:"sticky",left:0,background:"#fff"}}>{r.cab}</td>
                   <td style={{padding:"5px 9px",textAlign:"right",fontWeight:600,color:"#374151"}}>{r.total}</td>
                   {SRCS.map(s=>(
-                    <td key={s} style={{padding:"5px 9px",textAlign:"right",color:r[s]>0?(SRC_COLORS_MAP[s]||"#374151"):"#e5e7eb",fontWeight:r[s]>0?600:400}}>
+                    <td key={s} style={{padding:"5px 9px",textAlign:"right",
+                      color:r[s]>0?(SRC_CLR[s]||"#374151"):"#e5e7eb",
+                      fontWeight:r[s]>0?600:400}}>
                       {r[s]>0?r[s]:"—"}
                     </td>
                   ))}
@@ -618,10 +648,14 @@ export default function App() {
               ))}
             </tbody>
           </table>
+          <div style={{fontSize:11,color:"#9ca3af",marginTop:8,padding:"6px 0",borderTop:"1px solid #f3f4f6"}}>
+            💡 <strong>Ads Cabang</strong> = leads dengan label <em>Ads [nama cabang]</em> spesifik. Leads dari iklan kota lain dihitung di <em>Lainnya</em>.
+          </div>
         </div>
       );
     })()}
   </Card>
+
 
 </div>}
 
