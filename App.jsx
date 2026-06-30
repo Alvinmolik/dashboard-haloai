@@ -32,6 +32,12 @@ const CABANG_LIST = [
   "Leads Lainnya"
 ];
 
+const PRIORITY_CABANG = [
+  "PULOGADUNG","BEKASI","DEPOK","TANGSEL","CIKARANG","TANGKOT",
+  "BANDUNG","BOGOR","KARAWANG","CIANJUR","SUKABUMI","CIMAHI",
+  "GARUT","TASIKMALAYA","SUMEDANG","CILEGON","SERANG"
+];
+
 const BULAN = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 const TEMP_ORDER = ["Hot","Warm","Cold","Garbage"];
 const TEMP_COLORS = { Hot:"#e24b4a", Warm:"#ef9f27", Cold:"#378add", Garbage:"#9ca3af" };
@@ -147,6 +153,7 @@ export default function App() {
   // tab filters
   const [cabSrch, setCabSrch]   = useState("");
   const [cabSort, setCabSort]   = useState("rate");
+  const [cabPriorityOnly, setCabPriorityOnly] = useState(true);
   const [hwFilter,setHwFilter]  = useState("Semua");
   const [fuBulan, setFuBulan]   = useState("");
   const [fuCab,   setFuCab]     = useState("Semua");
@@ -233,12 +240,18 @@ export default function App() {
 
   const cabangSorted = useMemo(()=>{
     let r=[...cabangPerf];
+    // Priority mode: only show Jabodetabek + Jawa Barat cabang, in fixed priority order
+    if(cabPriorityOnly && !cabSrch){
+      r = r.filter(x=>PRIORITY_CABANG.includes(x.cabang));
+      r.sort((a,b)=>PRIORITY_CABANG.indexOf(a.cabang)-PRIORITY_CABANG.indexOf(b.cabang));
+      return r;
+    }
     if(cabSrch) r=r.filter(x=>x.cabang.toLowerCase().includes(cabSrch.toLowerCase()));
     if(cabSort==="rate")    r.sort((a,b)=>b.rate-a.rate);
     else if(cabSort==="closing") r.sort((a,b)=>b.closing-a.closing);
     else r.sort((a,b)=>b.leads-a.leads);
     return r;
-  },[cabangPerf,cabSrch,cabSort]);
+  },[cabangPerf,cabSrch,cabSort,cabPriorityOnly]);
 
   // source
   const sourceDist = useMemo(()=>{
@@ -533,8 +546,17 @@ export default function App() {
   </div>
 
   <Card title="Performa Per Cabang"
+    subtitle={cabPriorityOnly&&!cabSrch?"Menampilkan cabang Jabodetabek & Jawa Barat — klik tombol untuk lihat semua cabang":undefined}
     extra={
       <div style={{display:"flex",gap:7,flexWrap:"wrap",alignItems:"center"}}>
+        <button onClick={()=>setCabPriorityOnly(v=>!v)}
+          style={{fontSize:12,padding:"5px 11px",borderRadius:7,
+            border:cabPriorityOnly?"1px solid #1d4ed8":"1px solid #e5e7eb",
+            background:cabPriorityOnly?"#eff6ff":"#fff",
+            color:cabPriorityOnly?"#1d4ed8":"#374151",
+            cursor:"pointer",fontWeight:cabPriorityOnly?600:400,whiteSpace:"nowrap"}}>
+          {cabPriorityOnly?"📍 Jabodetabek + Jabar":"🌐 Semua Cabang"}
+        </button>
         <Inp value={cabSrch} onChange={setCabSrch} placeholder="Cari cabang..." style={{width:140}} />
         <Sel value={cabSort} onChange={setCabSort}
           opts={[["rate","↓ Closing Rate"],["closing","↓ Closing"],["leads","↓ Leads"]]} />
@@ -602,12 +624,18 @@ export default function App() {
       .map(([cab,v])=>({cab,...v,total:Object.values(v).reduce((a,b)=>a+b,0)}))
       .filter(r=>cabSrch===""||r.cab.toLowerCase().includes(cabSrch.toLowerCase()));
 
-    // Sort
-    rows2.sort((a,b)=>{
-      const av = srcSort==="total" ? a.total : (a[srcSort]||0);
-      const bv = srcSort==="total" ? b.total : (b[srcSort]||0);
-      return srcDir==="desc" ? bv-av : av-bv;
-    });
+    // Priority mode: only show Jabodetabek + Jawa Barat, fixed order
+    if(cabPriorityOnly && !cabSrch){
+      rows2 = rows2.filter(r=>PRIORITY_CABANG.includes(r.cab));
+      rows2.sort((a,b)=>PRIORITY_CABANG.indexOf(a.cab)-PRIORITY_CABANG.indexOf(b.cab));
+    } else {
+      // Sort
+      rows2.sort((a,b)=>{
+        const av = srcSort==="total" ? a.total : (a[srcSort]||0);
+        const bv = srcSort==="total" ? b.total : (b[srcSort]||0);
+        return srcDir==="desc" ? bv-av : av-bv;
+      });
+    }
 
     const SortBtn = ({col}) => {
       const active = srcSort===col;
@@ -623,8 +651,11 @@ export default function App() {
 
     return (
       <Card title="Sumber Leads per Cabang"
-        subtitle="Klik header kolom untuk sort · ↑ terendah ke tertinggi · ↓ tertinggi ke terendah"
+        subtitle={cabPriorityOnly&&!cabSrch
+          ? "Cabang Jabodetabek & Jawa Barat — gunakan tombol di tabel atas untuk lihat semua cabang"
+          : "Klik header kolom untuk sort · ↑ terendah ke tertinggi · ↓ tertinggi ke terendah"}
         extra={
+          !(cabPriorityOnly&&!cabSrch) &&
           <div style={{fontSize:11,color:"#9ca3af",display:"flex",alignItems:"center",gap:4}}>
             Sort: <strong style={{color:SRC_CLR[srcSort]||"#374151"}}>{srcSort==="total"?"Total":SRC_SHORT[srcSort]}</strong>
             <span>{srcDir==="desc"?"↓ Tertinggi":"↑ Terendah"}</span>
