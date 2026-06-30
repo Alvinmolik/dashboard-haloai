@@ -240,13 +240,12 @@ export default function App() {
 
   const cabangSorted = useMemo(()=>{
     let r=[...cabangPerf];
-    // Priority mode: only show Jabodetabek + Jawa Barat cabang, in fixed priority order
+    // Priority mode: only show Jabodetabek + Jawa Barat cabang — but still sortable
     if(cabPriorityOnly && !cabSrch){
       r = r.filter(x=>PRIORITY_CABANG.includes(x.cabang));
-      r.sort((a,b)=>PRIORITY_CABANG.indexOf(a.cabang)-PRIORITY_CABANG.indexOf(b.cabang));
-      return r;
+    } else if(cabSrch){
+      r = r.filter(x=>x.cabang.toLowerCase().includes(cabSrch.toLowerCase()));
     }
-    if(cabSrch) r=r.filter(x=>x.cabang.toLowerCase().includes(cabSrch.toLowerCase()));
     if(cabSort==="rate")    r.sort((a,b)=>b.rate-a.rate);
     else if(cabSort==="closing") r.sort((a,b)=>b.closing-a.closing);
     else r.sort((a,b)=>b.leads-a.leads);
@@ -621,21 +620,21 @@ export default function App() {
     }));
 
     let rows2 = Object.entries(m)
-      .map(([cab,v])=>({cab,...v,total:Object.values(v).reduce((a,b)=>a+b,0)}))
-      .filter(r=>cabSrch===""||r.cab.toLowerCase().includes(cabSrch.toLowerCase()));
+      .map(([cab,v])=>({cab,...v,total:Object.values(v).reduce((a,b)=>a+b,0)}));
 
-    // Priority mode: only show Jabodetabek + Jawa Barat, fixed order
+    // Priority mode: only show Jabodetabek + Jawa Barat — but still sortable
     if(cabPriorityOnly && !cabSrch){
       rows2 = rows2.filter(r=>PRIORITY_CABANG.includes(r.cab));
-      rows2.sort((a,b)=>PRIORITY_CABANG.indexOf(a.cab)-PRIORITY_CABANG.indexOf(b.cab));
-    } else {
-      // Sort
-      rows2.sort((a,b)=>{
-        const av = srcSort==="total" ? a.total : (a[srcSort]||0);
-        const bv = srcSort==="total" ? b.total : (b[srcSort]||0);
-        return srcDir==="desc" ? bv-av : av-bv;
-      });
+    } else if(cabSrch){
+      rows2 = rows2.filter(r=>r.cab.toLowerCase().includes(cabSrch.toLowerCase()));
     }
+
+    // Sort (always applies, including in priority mode)
+    rows2.sort((a,b)=>{
+      const av = srcSort==="total" ? a.total : (a[srcSort]||0);
+      const bv = srcSort==="total" ? b.total : (b[srcSort]||0);
+      return srcDir==="desc" ? bv-av : av-bv;
+    });
 
     const SortBtn = ({col}) => {
       const active = srcSort===col;
@@ -652,10 +651,9 @@ export default function App() {
     return (
       <Card title="Sumber Leads per Cabang"
         subtitle={cabPriorityOnly&&!cabSrch
-          ? "Cabang Jabodetabek & Jawa Barat — gunakan tombol di tabel atas untuk lihat semua cabang"
+          ? "Cabang Jabodetabek & Jawa Barat · klik header kolom untuk sort"
           : "Klik header kolom untuk sort · ↑ terendah ke tertinggi · ↓ tertinggi ke terendah"}
         extra={
-          !(cabPriorityOnly&&!cabSrch) &&
           <div style={{fontSize:11,color:"#9ca3af",display:"flex",alignItems:"center",gap:4}}>
             Sort: <strong style={{color:SRC_CLR[srcSort]||"#374151"}}>{srcSort==="total"?"Total":SRC_SHORT[srcSort]}</strong>
             <span>{srcDir==="desc"?"↓ Tertinggi":"↑ Terendah"}</span>
