@@ -302,18 +302,30 @@ export default function App() {
   // suhu per cabang (all-time, cabang filter only)
   const tempByCabang = useMemo(()=>{
     const m={};
-    allUniq.forEach(r=>r.c.forEach(c=>{
-      if(!m[c]) m[c]={leads:0,hot:0,warm:0,cold:0,garbage:0};
-      m[c].leads++;
-      if(r.t==="Hot")  m[c].hot++;
-      else if(r.t==="Warm")   m[c].warm++;
-      else if(r.t==="Cold")   m[c].cold++;
-      else                    m[c].garbage++;
-    }));
+    if(gCabang!=="Semua Cabang"){
+      // Filter aktif: hanya 1 baris cabang yg dipilih, hitung dari uniq
+      m[gCabang]={leads:0,hot:0,warm:0,cold:0,garbage:0};
+      uniq.forEach(r=>{
+        m[gCabang].leads++;
+        if(r.t==="Hot")       m[gCabang].hot++;
+        else if(r.t==="Warm") m[gCabang].warm++;
+        else if(r.t==="Cold") m[gCabang].cold++;
+        else                  m[gCabang].garbage++;
+      });
+    } else {
+      allUniq.forEach(r=>r.c.forEach(c=>{
+        if(!m[c]) m[c]={leads:0,hot:0,warm:0,cold:0,garbage:0};
+        m[c].leads++;
+        if(r.t==="Hot")       m[c].hot++;
+        else if(r.t==="Warm") m[c].warm++;
+        else if(r.t==="Cold") m[c].cold++;
+        else                  m[c].garbage++;
+      }));
+    }
     return Object.entries(m).map(([cabang,v])=>({
       cabang,...v,hotPct:v.leads>0?+((v.hot/v.leads)*100).toFixed(1):0
     })).sort((a,b)=>b.hotPct-a.hotPct);
-  },[allUniq]);
+  },[allUniq,uniq,gCabang]);
 
   const tempBySource = useMemo(()=>{
     const m={};
