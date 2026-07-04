@@ -220,18 +220,30 @@ export default function App() {
   // cabang perf uses filtered (period applies)
   const cabangPerf = useMemo(()=>{
     const m={};
-    const base = gCabang==="Semua Cabang"
-      ? (()=>{ const s=new Set(); return filtered.filter(r=>{ const k=r.p||r.n; if(s.has(k)) return false; s.add(k); return true; }); })()
-      : uniq;
-    base.forEach(r=>r.c.forEach(c=>{
-      if(!m[c]) m[c]={leads:0,closing:0,hot:0,warm:0,cold:0,garbage:0};
-      m[c].leads++;
-      if(r.cl) m[c].closing++;
-      if(r.t==="Hot")     m[c].hot++;
-      else if(r.t==="Warm")    m[c].warm++;
-      else if(r.t==="Cold")    m[c].cold++;
-      else                     m[c].garbage++;
-    }));
+    if(gCabang!=="Semua Cabang"){
+      // Filter aktif: hanya tampilkan 1 baris cabang yang dipilih
+      m[gCabang]={leads:0,closing:0,hot:0,warm:0,cold:0,garbage:0};
+      uniq.forEach(r=>{
+        m[gCabang].leads++;
+        if(r.cl) m[gCabang].closing++;
+        if(r.t==="Hot")          m[gCabang].hot++;
+        else if(r.t==="Warm")    m[gCabang].warm++;
+        else if(r.t==="Cold")    m[gCabang].cold++;
+        else                     m[gCabang].garbage++;
+      });
+    } else {
+      // Semua cabang: explode by r.c
+      const base=(()=>{ const s=new Set(); return filtered.filter(r=>{ const k=r.p||r.n; if(s.has(k)) return false; s.add(k); return true; }); })();
+      base.forEach(r=>r.c.forEach(c=>{
+        if(!m[c]) m[c]={leads:0,closing:0,hot:0,warm:0,cold:0,garbage:0};
+        m[c].leads++;
+        if(r.cl) m[c].closing++;
+        if(r.t==="Hot")     m[c].hot++;
+        else if(r.t==="Warm")    m[c].warm++;
+        else if(r.t==="Cold")    m[c].cold++;
+        else                     m[c].garbage++;
+      }));
+    }
     return Object.entries(m).map(([cabang,v])=>({
       cabang,...v,
       rate:v.leads>0?+((v.closing/v.leads)*100).toFixed(1):0,
@@ -339,17 +351,25 @@ export default function App() {
 
   const genderByCabang = useMemo(()=>{
     const m={};
-    const base = gCabang==="Semua Cabang"
-      ? (()=>{const s=new Set();return rows.filter(r=>{const k=r.p||r.n;if(s.has(k))return false;s.add(k);return true;})})()
-      : allUniq;
-    base.filter(r=>r.g).forEach(r=>r.c.forEach(c=>{
-      if(!m[c]) m[c]={l:0,p:0};
-      if(r.g==="L") m[c].l++; else if(r.g==="P") m[c].p++;
-    }));
+    if(gCabang!=="Semua Cabang"){
+      // Filter aktif: hanya tampilkan cabang yang dipilih
+      uniq.filter(r=>r.g).forEach(r=>{
+        const c=gCabang;
+        if(!m[c]) m[c]={l:0,p:0};
+        if(r.g==="L") m[c].l++; else if(r.g==="P") m[c].p++;
+      });
+    } else {
+      // Semua cabang: explode by r.c
+      const base=(()=>{const s=new Set();return rows.filter(r=>{const k=r.p||r.n;if(s.has(k))return false;s.add(k);return true;})})();
+      base.filter(r=>r.g).forEach(r=>r.c.forEach(c=>{
+        if(!m[c]) m[c]={l:0,p:0};
+        if(r.g==="L") m[c].l++; else if(r.g==="P") m[c].p++;
+      }));
+    }
     return Object.entries(m)
       .map(([cabang,v])=>({cabang,...v,total:v.l+v.p,lPct:v.l+v.p>0?+((v.l/(v.l+v.p))*100).toFixed(1):0}))
       .filter(r=>r.total>0).sort((a,b)=>b.total-a.total);
-  },[rows,allUniq,gCabang]);
+  },[rows,allUniq,uniq,gCabang]);
 
   const genderBySource = useMemo(()=>{
     const m={};
