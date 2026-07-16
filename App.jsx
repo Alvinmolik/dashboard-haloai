@@ -81,6 +81,40 @@ function dlCabangSummaryCSV(cabangData, fname) {
   a.download = fname; a.click();
 }
 
+function dlSumberCabangCSV(rows2, fname) {
+  const SRCS = ["Ads Cabang","Iklan Meta Pusat","Google Ads","Instagram Organik","Website","Lainnya"];
+  const H = ["Cabang","Total",...SRCS];
+  const lines = [H.join(","), ...rows2.map(r=>[
+    r.cab, r.total, ...SRCS.map(s=>r[s]||0)
+  ].join(","))];
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([lines.join("\n")],{type:"text/csv;charset=utf-8;"}));
+  a.download = fname; a.click();
+}
+
+function dlSumberCabangXLSX(rows2, fname) {
+  const SRCS = ["Ads Cabang","Iklan Meta Pusat","Google Ads","Instagram Organik","Website","Lainnya"];
+  const tableRows = [
+    ["Cabang","Total",...SRCS],
+    ...rows2.map(r=>[r.cab, r.total, ...SRCS.map(s=>r[s]||0)])
+  ];
+  let xml = `<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Sumber Leads per Cabang"><Table>`;
+  tableRows.forEach((row,ri)=>{
+    xml += "<Row>";
+    row.forEach((cell,ci)=>{
+      const isNum = ri>0 && ci>0;
+      xml += isNum
+        ? `<Cell><Data ss:Type="Number">${cell}</Data></Cell>`
+        : `<Cell><Data ss:Type="String">${String(cell).replace(/&/g,"&amp;").replace(/</g,"&lt;")}</Data></Cell>`;
+    });
+    xml += "</Row>";
+  });
+  xml += "</Table></Worksheet></Workbook>";
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([xml],{type:"application/vnd.ms-excel"}));
+  a.download = fname; a.click();
+}
+
 function dlCabangSummaryXLSX(cabangData, fname) {
   const rows = [
     ["Cabang","Total Leads","Closing","Hot","Warm","Cold","Garbage","Closing Rate (%)","Hot Rate (%)"],
@@ -774,6 +808,16 @@ export default function App() {
         <div style={{fontSize:11,color:"#9ca3af",marginTop:8,padding:"6px 0",borderTop:"1px solid #f3f4f6"}}>
           💡 <strong>Ads Cabang</strong> = leads dengan label <em>Ads [nama cabang]</em> spesifik.
           Leads dari iklan kota lain masuk di <em>Lainnya</em>.
+        </div>
+        <div style={{display:"flex",gap:6,marginTop:10}}>
+          <button onClick={()=>dlSumberCabangCSV(rows2,`sumber-leads-cabang-${new Date().toISOString().slice(0,10)}.csv`)}
+            style={{fontSize:11,padding:"5px 10px",borderRadius:7,border:"1px solid #e5e7eb",background:"#fff",cursor:"pointer",color:"#374151",display:"flex",alignItems:"center",gap:3}}>
+            ⬇ Download CSV
+          </button>
+          <button onClick={()=>dlSumberCabangXLSX(rows2,`sumber-leads-cabang-${new Date().toISOString().slice(0,10)}.xls`)}
+            style={{fontSize:11,padding:"5px 10px",borderRadius:7,border:"1px solid #059669",background:"#ecfdf5",cursor:"pointer",color:"#059669",display:"flex",alignItems:"center",gap:3}}>
+            ⬇ Download Excel
+          </button>
         </div>
       </Card>
     );
